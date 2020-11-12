@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -86,8 +87,8 @@ public class NaviActivity extends BaseActivity implements RouteListener, Progres
 
     // This dummy points will be used to build route. For real world test this needs to be changed to real values for
 // source and target locations.
-    private final Point ROUTE_ORIGIN = Point.fromLngLat(27.654285, 53.928057);
-    private final Point ROUTE_DESTINATION = Point.fromLngLat(27.655637, 53.935712);
+    private final Point ROUTE_ORIGIN = Point.fromLngLat(121.212058, 31.287271);
+    private final Point ROUTE_DESTINATION = Point.fromLngLat(121.498555, 31.285400);
 
     @Override
     protected void initViews() {
@@ -307,6 +308,9 @@ public class NaviActivity extends BaseActivity implements RouteListener, Progres
 // Start navigation session with retrieved route.
                         DirectionsRoute route = response.body().routes().get(0);
                         mapboxNavigation.startNavigation(route);
+                        Log.i("Route --------",""+route);
+                        Log.i("Route points ---",""+getRoutePoints(route));
+                        Log.i("Route duration --------",""+getRoutePoints(route));
 
 // Set route progress.
                         VisionArManager.setRoute(new Route(
@@ -344,6 +348,8 @@ public class NaviActivity extends BaseActivity implements RouteListener, Progres
             mapboxNavigation.startNavigation(route);
 
 // Set route progress.
+            Log.i("Route --------",""+route);
+            Log.i("Route points ---",""+getRoutePoints(route));
             VisionArManager.setRoute(new Route(
                     getRoutePoints(route),
                     (float) routeProgress.durationRemaining(),
