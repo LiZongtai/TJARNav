@@ -70,9 +70,9 @@ import retrofit2.Response;
  * Example shows how Vision and VisionAR SDKs are used to draw AR lane over the video stream from camera.
  * Also, Mapbox navigation services are used to build route and  navigation session.
  */
-public class NaviActivity extends BaseActivity implements RouteListener, ProgressChangeListener, OffRouteListener {
+public class ArActivity extends BaseActivity implements RouteListener, ProgressChangeListener, OffRouteListener {
 
-    private static final String TAG = NaviActivity.class.getSimpleName();
+    private static final String TAG = ArActivity.class.getSimpleName();
 
     // Handles navigation.
     private MapboxNavigation mapboxNavigation;
@@ -92,7 +92,7 @@ public class NaviActivity extends BaseActivity implements RouteListener, Progres
 
     @Override
     protected void initViews() {
-        setContentView(R.layout.activity_navi);
+        setContentView(R.layout.activity_ar);
         Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
         int ori = mConfiguration.orientation; //获取屏幕方向
          if (ori == mConfiguration.ORIENTATION_PORTRAIT) {
