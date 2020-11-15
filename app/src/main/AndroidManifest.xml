@@ -41,9 +41,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".amp.AmapMainActivity"
-            android:screenOrientation="fullSensor" />
-        <activity
             android:name=".amp.DriveRouteDetailActivity"
             android:label="@string/route_demo"
             android:screenOrientation="fullSensor" />
