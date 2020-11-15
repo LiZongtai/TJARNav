@@ -7,8 +7,6 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.tjarnav.amp.AmapMainActivity;
-
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -27,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
         NavBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent=new Intent(MainActivity.this, AmapMainActivity.class);
+                Intent intent=new Intent(MainActivity.this, NavActivity.class);
                 startActivity(intent);
             }
         });

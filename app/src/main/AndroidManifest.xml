@@ -24,13 +24,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:icon, android:theme">
+        <activity android:name=".InputTipsActivity"></activity>
+        <activity android:name=".NavActivity" />
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="704b967956f2e8d88d32d21bdc920d5c" />
 
         <activity android:name=".BaseActivity" />
-        <activity android:name=".ArActivity"/>
+        <activity android:name=".ArActivity" />
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,9 +40,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".amp.AmapMainActivity"
-            android:screenOrientation="fullSensor">
-        </activity>
+        <activity
+            android:name=".amp.AmapMainActivity"
+            android:screenOrientation="fullSensor" />
         <activity
             android:name=".amp.DriveRouteDetailActivity"
             android:label="@string/route_demo"

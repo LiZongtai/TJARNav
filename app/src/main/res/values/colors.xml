@@ -30,4 +30,6 @@
     <color name="act_background">#efefef</color>
     <color name="phone_bg">#f6f6f6</color>
     <color name="translucent">#66000000</color>
+
+    <color name="text_hint">#6C6C6C</color>
 </resources>
