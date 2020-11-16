@@ -131,8 +131,14 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         startRoute.setVisibility(View.INVISIBLE);
     }
     public void onNavClick(View view) {
-        searchRouteResult(ROUTE_TYPE_DRIVE, RouteSearch.DRIVING_SINGLE_DEFAULT);
-        mapView.setVisibility(View.VISIBLE);
+        final  Bundle bundle =new Bundle();
+        bundle.putDouble("startLat",mStartPoint.getLatitude());
+        bundle.putDouble("startLon",mStartPoint.getLongitude());
+        bundle.putDouble("endLat",mEndPoint.getLatitude());
+        bundle.putDouble("endLon",mEndPoint.getLongitude());
+        Intent intent = new Intent(NavActivity.this,ArActivity.class);
+        intent.putExtras(bundle);
+        startActivity(intent);
     }
 
 

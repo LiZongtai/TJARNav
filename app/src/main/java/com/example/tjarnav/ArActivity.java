@@ -1,5 +1,6 @@
 package com.example.tjarnav;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -87,12 +88,16 @@ public class ArActivity extends BaseActivity implements RouteListener, ProgressC
 
     // This dummy points will be used to build route. For real world test this needs to be changed to real values for
 // source and target locations.
-    private final Point ROUTE_ORIGIN = Point.fromLngLat(121.212058, 31.287271);
-    private final Point ROUTE_DESTINATION = Point.fromLngLat(121.498555, 31.285400);
+    private Point ROUTE_ORIGIN = Point.fromLngLat(121.212058, 31.287271);
+    private Point ROUTE_DESTINATION = Point.fromLngLat(121.498555, 31.285400);
 
     @Override
     protected void initViews() {
         setContentView(R.layout.activity_ar);
+        Intent intent = getIntent();
+        ROUTE_ORIGIN = Point.fromLngLat(intent.getDoubleExtra("startLon",0.0),intent.getDoubleExtra("startLat",0.0));
+        ROUTE_DESTINATION = Point.fromLngLat(intent.getDoubleExtra("endLon",0.0),intent.getDoubleExtra("endLat",0.0));
+
         Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
         int ori = mConfiguration.orientation; //获取屏幕方向
          if (ori == mConfiguration.ORIENTATION_PORTRAIT) {
