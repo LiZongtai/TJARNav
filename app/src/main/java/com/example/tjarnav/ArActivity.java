@@ -6,6 +6,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
@@ -16,6 +17,26 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.amap.api.navi.AMapNavi;
+import com.amap.api.navi.AMapNaviListener;
+import com.amap.api.navi.AMapNaviView;
+import com.amap.api.navi.AMapNaviViewListener;
+import com.amap.api.navi.enums.NaviType;
+import com.amap.api.navi.model.AMapCalcRouteResult;
+import com.amap.api.navi.model.AMapCarInfo;
+import com.amap.api.navi.model.AMapLaneInfo;
+import com.amap.api.navi.model.AMapModelCross;
+import com.amap.api.navi.model.AMapNaviCameraInfo;
+import com.amap.api.navi.model.AMapNaviCross;
+import com.amap.api.navi.model.AMapNaviLocation;
+import com.amap.api.navi.model.AMapNaviRouteNotifyData;
+import com.amap.api.navi.model.AMapNaviTrafficFacilityInfo;
+import com.amap.api.navi.model.AMapServiceAreaInfo;
+import com.amap.api.navi.model.AimLessModeCongestionInfo;
+import com.amap.api.navi.model.AimLessModeStat;
+import com.amap.api.navi.model.NaviInfo;
+import com.amap.api.navi.model.NaviLatLng;
+import com.example.tjarnav.amp.util.ErrorInfo;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
@@ -71,7 +92,7 @@ import retrofit2.Response;
  * Example shows how Vision and VisionAR SDKs are used to draw AR lane over the video stream from camera.
  * Also, Mapbox navigation services are used to build route and  navigation session.
  */
-public class ArActivity extends BaseActivity implements RouteListener, ProgressChangeListener, OffRouteListener {
+public class ArActivity extends BaseActivity implements RouteListener , ProgressChangeListener, OffRouteListener, AMapNaviListener, AMapNaviViewListener {
 
     private static final String TAG = ArActivity.class.getSimpleName();
 
@@ -91,12 +112,33 @@ public class ArActivity extends BaseActivity implements RouteListener, ProgressC
     private Point ROUTE_ORIGIN = Point.fromLngLat(121.212058, 31.287271);
     private Point ROUTE_DESTINATION = Point.fromLngLat(121.498555, 31.285400);
 
+    protected AMapNaviView mAMapNaviView;
+    protected AMapNavi mAMapNavi;
+    protected NaviLatLng mEndLatlng = new NaviLatLng(40.084894,116.603039);
+    protected NaviLatLng mStartLatlng = new NaviLatLng(39.825934,116.342972);
+    protected final List<NaviLatLng> sList = new ArrayList<NaviLatLng>();
+    protected final List<NaviLatLng> eList = new ArrayList<NaviLatLng>();
+    protected List<NaviLatLng> mWayPointList;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mAMapNaviView = (AMapNaviView) findViewById(R.id.navi_view);
+        mAMapNavi = AMapNavi.getInstance(getApplicationContext());
+        mAMapNaviView.onCreate(savedInstanceState);
+        mAMapNaviView.setAMapNaviViewListener(this);
+        mAMapNavi.addAMapNaviListener(this);
+    }
+
     @Override
     protected void initViews() {
         setContentView(R.layout.activity_ar);
+
         Intent intent = getIntent();
         ROUTE_ORIGIN = Point.fromLngLat(intent.getDoubleExtra("startLon",0.0),intent.getDoubleExtra("startLat",0.0));
         ROUTE_DESTINATION = Point.fromLngLat(intent.getDoubleExtra("endLon",0.0),intent.getDoubleExtra("endLat",0.0));
+        mStartLatlng = new NaviLatLng(intent.getDoubleExtra("startLat",0.0),intent.getDoubleExtra("startLon",0.0));
+        mEndLatlng = new NaviLatLng(intent.getDoubleExtra("endLat",0.0),intent.getDoubleExtra("endLon",0.0));
 
         Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
         int ori = mConfiguration.orientation; //获取屏幕方向
@@ -153,9 +195,35 @@ public class ArActivity extends BaseActivity implements RouteListener, ProgressC
     @Override
     protected void onStart() {
         super.onStart();
+        //设置模拟导航的行车速度
+        mAMapNavi.setEmulatorNaviSpeed(75);
+        sList.add(mStartLatlng);
+        eList.add(mEndLatlng);
         startVisionManager();
         startNavigation();
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mAMapNaviView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mAMapNaviView.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mAMapNaviView.onDestroy();
+        //since 1.6.0 不再在naviview destroy的时候自动执行AMapNavi.stopNavi();请自行执行
+        mAMapNavi.stopNavi();
+        mAMapNavi.destroy();
+    }
+
 
     @Override
     protected void onStop() {
@@ -452,5 +520,265 @@ public class ArActivity extends BaseActivity implements RouteListener, ProgressC
             default:
                 return ManeuverType.None;
         }
+    }
+
+
+//    高德
+
+    @Override
+    public void onInitNaviFailure() {
+        Toast.makeText(this, "init navi Failed", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onInitNaviSuccess() {
+        /**
+         * 方法: int strategy=mAMapNavi.strategyConvert(congestion, avoidhightspeed, cost, hightspeed, multipleroute); 参数:
+         *
+         * @congestion 躲避拥堵
+         * @avoidhightspeed 不走高速
+         * @cost 避免收费
+         * @hightspeed 高速优先
+         * @multipleroute 多路径
+         *
+         *  说明: 以上参数都是boolean类型，其中multipleroute参数表示是否多条路线，如果为true则此策略会算出多条路线。
+         *  注意: 不走高速与高速优先不能同时为true 高速优先与避免收费不能同时为true
+         */
+        int strategy = 0;
+        try {
+            //再次强调，最后一个参数为true时代表多路径，否则代表单路径
+            strategy = mAMapNavi.strategyConvert(true, false, false, false, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        AMapCarInfo aMapCarInfo=new AMapCarInfo();
+        aMapCarInfo.setCarNumber("京DFZ588");
+        mAMapNavi.setCarInfo(aMapCarInfo);
+        mAMapNavi.calculateDriveRoute(sList, eList, mWayPointList, strategy);
+    }
+
+    @Override
+    public void onStartNavi(int i) {
+
+    }
+
+    @Override
+    public void onTrafficStatusUpdate() {
+
+    }
+
+    @Override
+    public void onLocationChange(AMapNaviLocation aMapNaviLocation) {
+
+    }
+
+    @Override
+    public void onGetNavigationText(int i, String s) {
+
+    }
+
+    @Override
+    public void onGetNavigationText(String s) {
+
+    }
+
+    @Override
+    public void onEndEmulatorNavi() {
+
+    }
+
+    @Override
+    public void onArriveDestination() {
+
+    }
+
+    @Override
+    public void onCalculateRouteFailure(int i) {
+
+    }
+
+    @Override
+    public void onReCalculateRouteForYaw() {
+
+    }
+
+    @Override
+    public void onReCalculateRouteForTrafficJam() {
+
+    }
+
+    @Override
+    public void onArrivedWayPoint(int i) {
+
+    }
+
+    @Override
+    public void onGpsOpenStatus(boolean b) {
+
+    }
+
+    @Override
+    public void onNaviInfoUpdate(NaviInfo naviInfo) {
+
+    }
+
+    @Override
+    public void updateCameraInfo(AMapNaviCameraInfo[] aMapNaviCameraInfos) {
+
+    }
+
+    @Override
+    public void updateIntervalCameraInfo(AMapNaviCameraInfo aMapNaviCameraInfo, AMapNaviCameraInfo aMapNaviCameraInfo1, int i) {
+
+    }
+
+    @Override
+    public void onServiceAreaUpdate(AMapServiceAreaInfo[] aMapServiceAreaInfos) {
+
+    }
+
+    @Override
+    public void showCross(AMapNaviCross aMapNaviCross) {
+
+    }
+
+    @Override
+    public void hideCross() {
+
+    }
+
+    @Override
+    public void showModeCross(AMapModelCross aMapModelCross) {
+
+    }
+
+    @Override
+    public void hideModeCross() {
+
+    }
+
+    @Override
+    public void showLaneInfo(AMapLaneInfo[] aMapLaneInfos, byte[] bytes, byte[] bytes1) {
+
+    }
+
+    @Override
+    public void showLaneInfo(AMapLaneInfo aMapLaneInfo) {
+
+    }
+
+    @Override
+    public void hideLaneInfo() {
+
+    }
+
+    @Override
+    public void onCalculateRouteSuccess(int[] ints) {
+        mAMapNavi.startNavi(NaviType.GPS);
+    }
+
+    @Override
+    public void notifyParallelRoad(int i) {
+
+    }
+
+    @Override
+    public void OnUpdateTrafficFacility(AMapNaviTrafficFacilityInfo[] aMapNaviTrafficFacilityInfos) {
+
+    }
+
+    @Override
+    public void OnUpdateTrafficFacility(AMapNaviTrafficFacilityInfo aMapNaviTrafficFacilityInfo) {
+
+    }
+
+    @Override
+    public void updateAimlessModeStatistics(AimLessModeStat aimLessModeStat) {
+
+    }
+
+    @Override
+    public void updateAimlessModeCongestionInfo(AimLessModeCongestionInfo aimLessModeCongestionInfo) {
+
+    }
+
+    @Override
+    public void onPlayRing(int i) {
+
+    }
+
+    @Override
+    public void onCalculateRouteSuccess(AMapCalcRouteResult aMapCalcRouteResult) {
+
+    }
+
+    @Override
+    public void onCalculateRouteFailure(AMapCalcRouteResult aMapCalcRouteResult) {
+
+    }
+
+    @Override
+    public void onNaviRouteNotify(AMapNaviRouteNotifyData aMapNaviRouteNotifyData) {
+
+    }
+
+    @Override
+    public void onGpsSignalWeak(boolean b) {
+
+    }
+
+    @Override
+    public void onNaviSetting() {
+
+    }
+
+    @Override
+    public void onNaviCancel() {
+
+    }
+
+    @Override
+    public boolean onNaviBackClick() {
+        return false;
+    }
+
+    @Override
+    public void onNaviMapMode(int i) {
+
+    }
+
+    @Override
+    public void onNaviTurnClick() {
+
+    }
+
+    @Override
+    public void onNextRoadClick() {
+
+    }
+
+    @Override
+    public void onScanViewButtonClick() {
+
+    }
+
+    @Override
+    public void onLockMap(boolean b) {
+
+    }
+
+    @Override
+    public void onNaviViewLoaded() {
+
+    }
+
+    @Override
+    public void onMapTypeChanged(int i) {
+
+    }
+
+    @Override
+    public void onNaviViewShowMode(int i) {
+
     }
 }
