@@ -120,6 +120,8 @@
     </RelativeLayout>
 
     <TextView
+        android:id="@+id/startRoute"
+        android:visibility="invisible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="规划路线"
@@ -128,6 +130,20 @@
         android:layout_alignParentBottom="true"
         android:padding="4dp"
         android:onClick="onDriveClick"
+        android:gravity="center"
+        android:drawablePadding="6dp"
+        android:background="@drawable/title_background"/>
+    <TextView
+        android:id="@+id/startNav"
+        android:visibility="invisible"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="规划路线"
+        android:drawableLeft="@drawable/route_drive_normal"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:padding="4dp"
+        android:onClick="onNavClick"
         android:gravity="center"
         android:drawablePadding="6dp"
         android:background="@drawable/title_background"/>

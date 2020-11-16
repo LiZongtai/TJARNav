@@ -61,6 +61,9 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
     private TextView mKeywordsTextView;
     private ImageView mCleanKeyWords;
 
+    private TextView startRoute;
+    private TextView startNav;
+
     public static final int REQUEST_CODE = 100;
     public static final int RESULT_CODE_INPUTTIPS = 101;
 
@@ -80,6 +83,9 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         mContext = this.getApplicationContext();
         mapView = (MapView) findViewById(R.id.route_map);
         mapView.onCreate(savedInstanceState);// 此方法必须重写
+        startRoute=(TextView)findViewById(R.id.startRoute);
+        startNav=(TextView)findViewById(R.id.startNav);
+
         init();
     }
     private void setfromandtoMarker() {
@@ -121,6 +127,12 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
     public void onDriveClick(View view) {
         searchRouteResult(ROUTE_TYPE_DRIVE, RouteSearch.DRIVING_SINGLE_DEFAULT);
         mapView.setVisibility(View.VISIBLE);
+        startNav.setVisibility(View.VISIBLE);
+        startRoute.setVisibility(View.INVISIBLE);
+    }
+    public void onNavClick(View view) {
+        searchRouteResult(ROUTE_TYPE_DRIVE, RouteSearch.DRIVING_SINGLE_DEFAULT);
+        mapView.setVisibility(View.VISIBLE);
     }
 
 
@@ -144,6 +156,7 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
             mEndPoint=tip.getPoint();
             Toast.makeText(NavActivity.this, tip.getPoint() + "," + tip.getName(), Toast.LENGTH_LONG).show();
             mKeywordsTextView.setText(tip.getName());
+            startRoute.setVisibility(View.VISIBLE);
             if(!tip.getName().equals("")){
                 mCleanKeyWords.setVisibility(View.VISIBLE);
             }
