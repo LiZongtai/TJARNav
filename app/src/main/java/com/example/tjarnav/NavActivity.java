@@ -13,7 +13,12 @@ import android.widget.Toast;
 
 import androidx.fragment.app.FragmentActivity;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps.AMap;
+import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
@@ -40,9 +45,9 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
     private Context mContext;
     private RouteSearch mRouteSearch;
     private DriveRouteResult mDriveRouteResult;
-    private LatLonPoint mStartPoint = new LatLonPoint(39.942295, 116.335891);//起点，116.335891,39.942295
-    private LatLonPoint mEndPoint = new LatLonPoint(39.995576, 116.481288);//终点，116.481288,39.995576
-    private LatLonPoint mStartPoint_bus = new LatLonPoint(40.818311, 111.670801);//起点，111.670801,40.818311
+    private LatLonPoint mStartPoint = new LatLonPoint(39.942295, 116.335891);//起点
+    private LatLonPoint mEndPoint = new LatLonPoint(39.995576, 116.481288);//终点
+    private LatLonPoint mStartPoint_bus = new LatLonPoint(40.818311, 111.670801);//起点
     private LatLonPoint mEndPoint_bus = new LatLonPoint(44.433942, 125.184449);//终点，
     private String mCurrentCityName = "北京";
     private final int ROUTE_TYPE_BUS = 1;
@@ -59,6 +64,13 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
     public static final int REQUEST_CODE = 100;
     public static final int RESULT_CODE_INPUTTIPS = 101;
 
+    //声明AMapLocationClient类对象
+    public AMapLocationClient mLocationClient = null;
+    //声明AMapLocationClientOption对象
+    public AMapLocationClientOption mLocationOption = null;
+    public double mLat=0.0;
+    public double mLon=0.0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,7 +81,6 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         mapView = (MapView) findViewById(R.id.route_map);
         mapView.onCreate(savedInstanceState);// 此方法必须重写
         init();
-        setfromandtoMarker();
     }
     private void setfromandtoMarker() {
         aMap.addMarker(new MarkerOptions()
@@ -78,6 +89,8 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         aMap.addMarker(new MarkerOptions()
                 .position(AMapUtil.convertToLatLng(mEndPoint))
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.end)));
+        LatLng latLng=new LatLng(mLat,mLon);
+        aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,16));
     }
 
     /**
@@ -87,6 +100,7 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         if (aMap == null) {
             aMap = mapView.getMap();
         }
+        startLocaion();
         registerListener();
         mRouteSearch = new RouteSearch(this);
         mRouteSearch.setRouteSearchListener(this);
@@ -308,4 +322,69 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         super.onDestroy();
         mapView.onDestroy();
     }
+    /*开启定位*/
+    public void startLocaion() {
+        mLocationClient = new AMapLocationClient(getApplicationContext());
+        mLocationClient.setLocationListener(mLocationListener);
+
+        mLocationOption = new AMapLocationClientOption();
+        //设置定位模式为AMapLocationMode.Hight_Accuracy，高精度模式。
+        mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        mLocationOption.setLocationCacheEnable(false);
+        //设置是否返回地址信息（默认返回地址信息）
+        mLocationOption.setNeedAddress(true);
+        //获取一次定位结果：
+        //该方法默认为false。
+        mLocationOption.setOnceLocation(true);
+        //设置是否允许模拟位置,默认为false，不允许模拟位置
+        mLocationOption.setMockEnable(false);
+
+        //给定位客户端对象设置定位参数
+        mLocationClient.setLocationOption(mLocationOption);
+        //启动定位
+        mLocationClient.startLocation();
+    }
+    //声明定位回调监听器
+    public AMapLocationListener mLocationListener = new AMapLocationListener() {
+        @Override
+        public void onLocationChanged(AMapLocation amapLocation) {
+            if (amapLocation !=null ) {
+                if (amapLocation.getErrorCode() == 0) {
+                    mLat=amapLocation.getLatitude();
+                    mLon=amapLocation.getLongitude();
+                    String latitude=""+mLat;
+                    String longitude=""+mLon;
+                    mStartPoint = new LatLonPoint(mLat, mLon);//起点
+                    String address=amapLocation.getAddress();
+                    String location=latitude+","+longitude;
+                    setfromandtoMarker();
+                    //定位成功回调信息，设置相关消息
+                    Log.i("LocationUtil -----","当前定位结果来源-----"+amapLocation.getLocationType());//获取当前定位结果来源，如网络定位结果，详见定位类型表
+                    Log.i("LocationUtil -----","经纬度 ----------------"+location);//获取经纬度
+                    Log.i("LocationUtil -----","建筑物id ----------------"+amapLocation.getBuildingId());//获取建筑物Id
+                    Log.i("LocationUtil -----","地址-----------------"+address);//地址，如果option中设置isNeedAddress为false，则没有此结果，网络定位结果中会有地址信息，GPS定位不返回地址信息。
+//                    Log.i("LocationUtil -----","国家信息-------------"+amapLocation.getCountry());//国家信息
+//                    Log.i("LocationUtil -----","省信息---------------"+amapLocation.getProvince());//省信息
+//                    Log.i("LocationUtil -----","城市信息-------------"+amapLocation.getCity());//城市信息
+//                    Log.i("LocationUtil -----","城区信息-------------"+amapLocation.getDistrict());//城区信息
+//                    Log.i("LocationUtil -----","街道信息-------------"+amapLocation.getStreet());//街道信息
+//                    Log.i("LocationUtil -----","街道门牌号信息-------"+amapLocation.getStreetNum());//街道门牌号信息
+//                    Log.i("LocationUtil -----","城市编码-------------"+amapLocation.getCityCode());//城市编码
+//                    Log.i("LocationUtil -----","地区编码-------------"+amapLocation.getAdCode());//地区编码
+//                    Log.i("LocationUtil -----","当前定位点的信息-----"+amapLocation.getAoiName());//获取当前定位点的AOI信息
+//                    for (int j = 0; j < wifis.size(); j++) {
+//                        if (wifis.get(j).getLocation()==null || wifis.get(j).getAddress()==null) {
+//                            wifis.get(j).setAddress(address);
+//                            wifis.get(j).setLocation(location);
+//                        }
+//                    }
+                } else {
+                    //显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
+                    Log.e("AmapError", "location Error, ErrCode:"
+                            + amapLocation.getErrorCode() + ", errInfo:"
+                            + amapLocation.getErrorInfo());
+                }
+            }
+        }
+    };
 }
