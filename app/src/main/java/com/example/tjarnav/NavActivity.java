@@ -86,9 +86,9 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         aMap.addMarker(new MarkerOptions()
                 .position(AMapUtil.convertToLatLng(mStartPoint))
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.start)));
-        aMap.addMarker(new MarkerOptions()
-                .position(AMapUtil.convertToLatLng(mEndPoint))
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.end)));
+//        aMap.addMarker(new MarkerOptions()
+//                .position(AMapUtil.convertToLatLng(mEndPoint))
+//                .icon(BitmapDescriptorFactory.fromResource(R.drawable.end)));
         LatLng latLng=new LatLng(mLat,mLon);
         aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,16));
     }
@@ -141,6 +141,7 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
 
             Log.d("hgy", "onActivityResult: RESULT_CODE_INPUTTIPS->" + Constants.EXTRA_TIP
                     +"->"+ tip.toString() + "," + tip.getPoint());
+            mEndPoint=tip.getPoint();
             Toast.makeText(NavActivity.this, tip.getPoint() + "," + tip.getName(), Toast.LENGTH_LONG).show();
             mKeywordsTextView.setText(tip.getName());
             if(!tip.getName().equals("")){
