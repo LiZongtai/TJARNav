@@ -1,7 +1,8 @@
-package com.example.tjarnav;
+package com.example.tjarnav.ar.mapbox;
 
 import android.app.Application;
 
+import com.example.tjarnav.R;
 import com.mapbox.vision.VisionManager;
 
 

@@ -1,4 +1,4 @@
-package com.example.tjarnav;
+package com.example.tjarnav.ar.mapbox;
 
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.text.HtmlCompat;
 
+import com.example.tjarnav.R;
 import com.mapbox.vision.mobile.core.utils.SystemInfoUtils;
 import com.mapbox.vision.utils.VisionLogger;
 

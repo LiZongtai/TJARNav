@@ -15,24 +15,29 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-feature android:name="android.hardware.camera" />
 
     <application
-        android:name=".VisionApp"
+        android:name=".ar.mapbox.VisionApp"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:icon, android:theme">
-        <activity android:name=".InputTipsActivity"></activity>
+        <activity android:name=".ar.arcore.ArActivity" />
+        <activity android:name=".InputTipsActivity" />
         <activity android:name=".NavActivity" />
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="704b967956f2e8d88d32d21bdc920d5c" />
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required" />
 
-        <activity android:name=".BaseActivity" />
-        <activity android:name=".ArActivity" />
+        <activity android:name=".ar.mapbox.BaseActivity" />
+        <activity android:name=".ar.mapbox.MapboxArActivity" />
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

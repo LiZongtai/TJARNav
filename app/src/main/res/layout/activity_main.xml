@@ -13,12 +13,20 @@
             android:id="@+id/NavBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Amap Nav Navigation"/>
+            android:text="AR Navigation"
+            android:onClick="startNav"/>
         <Button
-            android:id="@+id/ArBtn"
+            android:id="@+id/MapboxBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="AR Navigation"/>
+            android:text="Mapbox AR Navigation"
+            android:onClick="startMapboxNav"/>
+        <Button
+            android:id="@+id/arBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="AR test"
+            android:onClick="startArTest"/>
     </LinearLayout>
 
 

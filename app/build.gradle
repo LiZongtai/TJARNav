@@ -12,6 +12,15 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            /*
+             * Sceneform is available for the following ABIs: arm64-v8a, armv7a,
+             * x86_64 and x86. This sample app enables arm64-v8a to run on
+             * devices and x86 to run on the emulator. Your application should
+             * list the ABIs most appropriate to minimize APK size (arm64-v8a recommended).
+             */
+            abiFilters 'arm64-v8a', 'x86'
+        }
     }
 
     buildTypes {
@@ -25,7 +34,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
@@ -45,5 +56,32 @@ dependencies {
     implementation 'com.amap.api:location:latest.integration'
     implementation 'com.amap.api:search:latest.integration'
     implementation 'com.amap.api:navi-3dmap:latest.integration'
+
+    implementation 'com.google.ar:core:1.15.0'
+//    implementation 'com.github.appoly:ARCore-Location:1.2'
+    implementation "com.google.ar.sceneform:core:1.15.0"
+    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.15.0"
+    implementation 'com.google.android.material:material:1.2.1'
+    implementation 'com.google.ar.sceneform:assets:1.15.0'
+
     api 'androidx.recyclerview:recyclerview:1.1.0'
 }
+
+apply plugin: 'com.google.ar.sceneform.plugin'
+sceneform.asset('sampledata/models/placemark.gltf', // 'Source Asset Path' specified during import.
+        'default',                            // 'Material Path' specified during import.
+        'sampledata/models/placemark.sfa',         // '.sfa Output Path' specified during import.
+        'src/main/res/raw/placemark')              // '.sfb Output Path' specified during import.
+sceneform.asset('sampledata/models/left.dae', // 'Source Asset Path' specified during import.
+        'default',                            // 'Material Path' specified during import.
+        'sampledata/models/left.sfa',         // '.sfa Output Path' specified during import.
+        'src/main/res/raw/left')              // '.sfb Output Path' specified during import.
+sceneform.asset('sampledata/models/right.dae', // 'Source Asset Path' specified during import.
+        'default',                            // 'Material Path' specified during import.
+        'sampledata/models/right.sfa',         // '.sfa Output Path' specified during import.
+        'src/main/res/raw/right')              // '.sfb Output Path' specified during import.
+sceneform.asset('sampledata/models/straight.dae', // 'Source Asset Path' specified during import.
+        'default',                            // 'Material Path' specified during import.
+        'sampledata/models/straight.sfa',         // '.sfa Output Path' specified during import.
+        'src/main/res/raw/straight')              // '.sfb Output Path' specified during import.
+

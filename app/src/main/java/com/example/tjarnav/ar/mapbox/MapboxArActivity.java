@@ -1,4 +1,4 @@
-package com.example.tjarnav;
+package com.example.tjarnav.ar.mapbox;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -36,7 +36,7 @@ import com.amap.api.navi.model.AimLessModeCongestionInfo;
 import com.amap.api.navi.model.AimLessModeStat;
 import com.amap.api.navi.model.NaviInfo;
 import com.amap.api.navi.model.NaviLatLng;
-import com.example.tjarnav.amp.util.ErrorInfo;
+import com.example.tjarnav.R;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
@@ -92,9 +92,9 @@ import retrofit2.Response;
  * Example shows how Vision and VisionAR SDKs are used to draw AR lane over the video stream from camera.
  * Also, Mapbox navigation services are used to build route and  navigation session.
  */
-public class ArActivity extends BaseActivity implements RouteListener , ProgressChangeListener, OffRouteListener, AMapNaviListener, AMapNaviViewListener {
+public class MapboxArActivity extends BaseActivity implements RouteListener , ProgressChangeListener, OffRouteListener, AMapNaviListener, AMapNaviViewListener {
 
-    private static final String TAG = ArActivity.class.getSimpleName();
+    private static final String TAG = MapboxArActivity.class.getSimpleName();
 
     // Handles navigation.
     private MapboxNavigation mapboxNavigation;
@@ -132,7 +132,7 @@ public class ArActivity extends BaseActivity implements RouteListener , Progress
 
     @Override
     protected void initViews() {
-        setContentView(R.layout.activity_ar);
+        setContentView(R.layout.activity_mapbox_ar);
 
         Intent intent = getIntent();
         ROUTE_ORIGIN = Point.fromLngLat(intent.getDoubleExtra("startLon",0.0),intent.getDoubleExtra("startLat",0.0));
@@ -167,7 +167,6 @@ public class ArActivity extends BaseActivity implements RouteListener , Progress
             window.getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                             |View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-
                             |View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                             |View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                             | View.SYSTEM_UI_FLAG_FULLSCREEN

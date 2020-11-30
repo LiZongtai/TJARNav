@@ -36,11 +36,14 @@ import com.example.tjarnav.amp.DriveRouteDetailActivity;
 import com.example.tjarnav.amp.DrivingRouteOverlay;
 import com.example.tjarnav.amp.util.AMapUtil;
 import com.example.tjarnav.amp.util.ToastUtil;
+import com.example.tjarnav.ar.arcore.ArActivity;
+import com.example.tjarnav.ar.mapbox.MapboxArActivity;
 import com.example.tjarnav.util.Constants;
 
 public class NavActivity extends FragmentActivity implements View.OnClickListener, AMap.OnMapClickListener,
         AMap.OnMarkerClickListener, RouteSearch.OnRouteSearchListener {
     private AMap aMap;
+    private int arType;
     private MapView mapView;
     private Context mContext;
     private RouteSearch mRouteSearch;
@@ -77,6 +80,9 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Intent intent = this.getIntent();
+        Bundle bundle = intent.getExtras();
+        arType=bundle.getInt("type");
         setContentView(R.layout.activity_nav);
         mCleanKeyWords = (ImageView)findViewById(R.id.clean_keywords);
         mCleanKeyWords.setOnClickListener(this);
@@ -136,9 +142,16 @@ public class NavActivity extends FragmentActivity implements View.OnClickListene
         bundle.putDouble("startLon",mStartPoint.getLongitude());
         bundle.putDouble("endLat",mEndPoint.getLatitude());
         bundle.putDouble("endLon",mEndPoint.getLongitude());
-        Intent intent = new Intent(NavActivity.this,ArActivity.class);
-        intent.putExtras(bundle);
-        startActivity(intent);
+        if(arType==1){
+            Intent intent = new Intent(NavActivity.this, ArActivity.class);
+            intent.putExtras(bundle);
+            startActivity(intent);
+        }
+        else if (arType==2){
+            Intent intent = new Intent(NavActivity.this, MapboxArActivity.class);
+            intent.putExtras(bundle);
+            startActivity(intent);
+        }
     }
 
 
