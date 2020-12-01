@@ -17,10 +17,13 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Toast;
 
+import com.amap.api.maps.AMapUtils;
+import com.amap.api.maps.model.LatLng;
 import com.amap.api.navi.AMapNavi;
 import com.amap.api.navi.AMapNaviListener;
 import com.amap.api.navi.AMapNaviView;
 import com.amap.api.navi.AMapNaviViewListener;
+import com.amap.api.navi.AmapNaviPage;
 import com.amap.api.navi.enums.NaviType;
 import com.amap.api.navi.model.AMapCalcRouteResult;
 import com.amap.api.navi.model.AMapCarInfo;
@@ -28,8 +31,12 @@ import com.amap.api.navi.model.AMapLaneInfo;
 import com.amap.api.navi.model.AMapModelCross;
 import com.amap.api.navi.model.AMapNaviCameraInfo;
 import com.amap.api.navi.model.AMapNaviCross;
+import com.amap.api.navi.model.AMapNaviLink;
 import com.amap.api.navi.model.AMapNaviLocation;
+import com.amap.api.navi.model.AMapNaviPath;
+import com.amap.api.navi.model.AMapNaviRouteGuideGroup;
 import com.amap.api.navi.model.AMapNaviRouteNotifyData;
+import com.amap.api.navi.model.AMapNaviStep;
 import com.amap.api.navi.model.AMapNaviTrafficFacilityInfo;
 import com.amap.api.navi.model.AMapServiceAreaInfo;
 import com.amap.api.navi.model.AimLessModeCongestionInfo;
@@ -68,7 +75,13 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     protected NaviLatLng mStartLatlng = new NaviLatLng(39.825934, 116.342972);
     protected final List<NaviLatLng> sList = new ArrayList<NaviLatLng>();
     protected final List<NaviLatLng> eList = new ArrayList<NaviLatLng>();
+
     protected List<NaviLatLng> mWayPointList;
+    protected AMapNaviPath aMapNaviPath;
+    private List<AMapNaviStep> steps;
+    private List<AMapNaviLink> links;
+    private List<AMapNaviRouteGuideGroup> guides;
+    private List<NaviLatLng> pathPoints;
 
 //    private  final RotatingSettings rotatingSettings =new RotatingSettings();
 
@@ -87,6 +100,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     };
 
 
+    @SuppressLint("SourceLockedOrientationActivity")
     @Override
     @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"})
     protected void onCreate(Bundle savedInstanceState) {
@@ -255,33 +269,30 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 //
 //        return mark;
 //    }
-    private void showObj(Vector3 worldSet,int type) {
-        if(tempNode!=null){
+    private void showObj(Vector3 worldSet, int type) {
+        if (tempNode != null) {
             arFragment.getArSceneView().getScene().removeChild(tempNode);
         }
         AnchorNode anchorNode = new AnchorNode();
         //设置锚点在世界坐标系的位置
         anchorNode.setWorldPosition(worldSet);
         anchorNode.setParent(arFragment.getArSceneView().getScene());
-        tempNode=anchorNode;
+        tempNode = anchorNode;
         TransformableNode mark = new TransformableNode(arFragment.getTransformationSystem());
         mark.setParent(anchorNode);
-        if(type==0){
+        if (type == 0) {
             mark.setRenderable(placeRenderable);
-        }
-        else if(type==2){
+        } else if (type == 2) {
             mark.setRenderable(leftRenderable);
-            Quaternion quaternion=new Quaternion(0f,0.989f,0.15f,0f);
+            Quaternion quaternion = new Quaternion(0f, 0.989f, 0.15f, 0f);
             mark.setLocalRotation(quaternion);
-        }
-        else if(type==3){
+        } else if (type == 3) {
             mark.setRenderable(rightRenderable);
-            Quaternion quaternion=new Quaternion(0f,0.989f,0.15f,0f);
+            Quaternion quaternion = new Quaternion(0f, 0.989f, 0.15f, 0f);
             mark.setLocalRotation(quaternion);
-        }
-        else if(type==9){
+        } else if (type == 9) {
             mark.setRenderable(straightRenderable);
-            Quaternion quaternion=new Quaternion(  0.062f,0.704f, 0.062f, 0.704f);
+            Quaternion quaternion = new Quaternion(0.062f, 0.704f, 0.062f, 0.704f);
             mark.setLocalRotation(quaternion);
         }
 
@@ -329,6 +340,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         Vector3 point = new Vector3(1f, -2f, -4f);
         showObj(point, 3);
     }
+
     public void turnRight(View view) {
         Toast.makeText(ArActivity.this, "右转", Toast.LENGTH_LONG).show();
         Vector3 point = new Vector3(1f, -2f, -4f);
@@ -340,6 +352,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         Vector3 point = new Vector3(0, -2f, -4f);
         showObj(point, 9);
     }
+
     public void goStraight(View view) {
         Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_LONG).show();
         Vector3 point = new Vector3(0, -2f, -4f);
@@ -354,6 +367,32 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
             mAMapNaviView.setVisibility(View.INVISIBLE);
             isHide = true;
         }
+    }
+
+    public double getDistance(LatLng start, LatLng end) {
+
+        double lon1 = (Math.PI / 180) * start.longitude;
+        double lon2 = (Math.PI / 180) * end.longitude;
+        double lat1 = (Math.PI / 180) * start.latitude;
+        double lat2 = (Math.PI / 180) * end.latitude;
+
+        // 地球半径
+        double R = 6371;
+
+        // 两点间距离 km，如果想要米的话，结果*1000就可以了
+        double d = Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1))
+                * R;
+
+        return d * 1000;
+    }
+    public static float getMin(float[] array) {
+        float Max = array[0];
+        for (int i = 1; i < array.length; i++) {
+            if (Max > array[i]) {
+                Max = array[i];
+            }
+        }
+        return Max;
     }
 
 
@@ -394,6 +433,9 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     @Override
     public void onStartNavi(int i) {
         // 开始导航回调
+//        List<AMapNaviRouteGuideGroup> guides = aMapNaviPath.getNaviGuideList();
+//        int length=aMapNaviPath.getAllLength();
+//        System.out.println("guides----"+length);
     }
 
     @Override
@@ -404,8 +446,22 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     @Override
     public void onLocationChange(AMapNaviLocation aMapNaviLocation) {
         // 当前位置回调
+        int len = 5;
+        System.out.println("path points size:   "+pathPoints.size());
+        LatLng cur = new LatLng(aMapNaviLocation.getCoord().getLatitude(), aMapNaviLocation.getCoord().getLongitude());
+        LatLng[] next = new LatLng[len];
+        float[] dist = new float[len];
+        for (int i = 0; i < len; i++) {
+            NaviLatLng point=pathPoints.get(i);
+            next[i]=new LatLng(point.getLatitude(), point.getLongitude());
+            dist[i]=(float) Math.abs(getDistance(cur, next[i]));
+            System.out.println("distance " + i + " is now-----" + dist[i]);
+        }
+        if(dist[0]<5 && dist[0]==getMin(dist)){
+            pathPoints.remove(0);
+            System.out.println("path points size:   "+pathPoints.size());
+        }
     }
-
     @Override
     public void onGetNavigationText(int i, String s) {
         // 播报类型和播报文字回调
@@ -427,9 +483,10 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         //到达目的地
     }
 
+
     @Override
     public void onCalculateRouteFailure(int i) {
-        //路线计算成功
+        //路线计算失败
     }
 
     @Override
@@ -454,6 +511,11 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
     @Override
     public void onNaviInfoUpdate(NaviInfo naviInfo) {
+        int dist = naviInfo.getCurStepRetainDistance();
+        int currentStep = naviInfo.getCurStep();
+        int currentLink = naviInfo.getCurLink();
+        System.out.println("当前Step index:" + currentStep + "当前Link index:" + currentLink);
+//        System.out.println(dist);
         int type = naviInfo.getIconType();
         if (type == 2) {
             turnLeft();
@@ -514,9 +576,54 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         //隐藏车道信息
     }
 
+
     @Override
     public void onCalculateRouteSuccess(int[] ints) {
         mAMapNavi.startNavi(NaviType.GPS);
+        if (ints != null && ints.length > 0) {
+            aMapNaviPath = mAMapNavi.getNaviPath();//导航返回的路径
+            guides = aMapNaviPath.getNaviGuideList();
+            steps = aMapNaviPath.getSteps();
+            if (guides.size() > 0 && steps.size() > 0) {
+                if (aMapNaviPath.getCoordList() != null) {
+                    pathPoints = aMapNaviPath.getCoordList();
+                    int size = pathPoints.size();//路径上所有的点
+                    for (int i = 0; i < size; i++) {
+                        NaviLatLng naviLatLng = pathPoints.get(i);
+                        System.out.println("路径上的点: " + naviLatLng);
+                    }
+
+                }
+
+                Toast.makeText(this, "看log", Toast.LENGTH_SHORT).show();
+                for (int i = 0; i < steps.size() - 1; i++) {
+                    //guide step相生相惜，指的是大导航段
+                    AMapNaviRouteGuideGroup guide = guides.get(i);
+                    System.out.println("AMapNaviGuide 路线起点经纬度:" + guide.getGroupEnterCoord() + "");
+                    System.out.println("AMapNaviGuide 路线名:" + guide.getGroupName() + "");
+                    System.out.println("AMapNaviGuide 路线长:" + guide.getGroupLen() + "m");
+                    System.out.println("AMapNaviGuide 路线耗时:" + guide.getGroupTime() + "s");
+                    System.out.println("AMapNaviGuide 路线IconType" + guide.getGroupIconType() + "");
+                    AMapNaviStep step = steps.get(i);
+                    System.out.println("AMapNaviStep 距离:" + step.getLength() + "m" + " " + "耗时:" + step.getTime() + "s");
+                    System.out.println("AMapNaviStep 红绿灯个数:" + step.getTrafficLightNumber());
+
+
+                    //link指的是大导航段中的小导航段
+                    links = step.getLinks();
+                    for (AMapNaviLink link : links) {
+                        // 请看com.amap.api.navi.enums.RoadClass，以及帮助文档
+                        System.out.println("AMapNaviLink 道路名:" + link.getRoadName() + " " + "道路等级: " + link.getRoadClass());
+                        // 请看com.amap.api.navi.enums.RoadType，以及帮助文档
+                        System.out.println("AMapNaviLink 道路类型:" + link.getRoadType());
+                    }
+                }
+
+            } else {
+                Toast.makeText(this, "BUG！请联系我们", Toast.LENGTH_SHORT).show();
+            }
+        }
+
     }
 
     @Override
