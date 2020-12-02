@@ -1,5 +1,6 @@
 package com.example.tjarnav.ar.arcore;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
@@ -48,7 +49,10 @@ import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
+import com.google.ar.sceneform.rendering.Color;
+import com.google.ar.sceneform.rendering.MaterialFactory;
 import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.TransformableNode;
 
@@ -395,6 +399,39 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         return Max;
     }
 
+    /**
+     * 绘制路径线
+     * @param point1
+     * @param point2
+     * @param worldSet
+     */
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void lineBetweenPoints(Vector3 point1, Vector3 point2, Vector3 worldSet){
+        AnchorNode anchorNode=new AnchorNode();
+        anchorNode.setWorldPosition(worldSet);
+        anchorNode.setParent(arFragment.getArSceneView().getScene());
+//        TransformableNode lineNode=new TransformableNode(arFragment.getTransformationSystem());
+
+        final Vector3 difference=Vector3.subtract(point1,point2);
+        final Vector3 directionFromTopToBottom =difference.normalized();
+        final Quaternion rotationFromAtoB=Quaternion.lookRotation(directionFromTopToBottom,Vector3.up());
+        float len=difference.length();
+        MaterialFactory.makeOpaqueWithColor(this,new Color(android.graphics.Color.YELLOW))
+                .thenAccept(
+                        material -> {
+                            ModelRenderable modelRenderable= ShapeFactory.makeCube(new Vector3(0.01f,0.001f,len),
+                                    Vector3.zero(),material);
+                            placeModel(anchorNode,modelRenderable);
+                        }
+                );
+    }
+
+    private void placeModel(AnchorNode anchorNode,ModelRenderable modelRenderable){
+        anchorNode.setRenderable(modelRenderable);
+        arFragment.getArSceneView().getScene().addChild(anchorNode);
+    }
+
 
 //    高德
 
@@ -443,6 +480,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onLocationChange(AMapNaviLocation aMapNaviLocation) {
         // 当前位置回调
@@ -461,6 +499,10 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
             pathPoints.remove(0);
             System.out.println("path points size:   "+pathPoints.size());
         }
+        Vector3 point1=new Vector3(0f,-5f,0f);
+        Vector3 point2=new Vector3(0f,-5f,-dist[1]);
+        Vector3 worldSet=new Vector3(0f,0f,0f);
+        lineBetweenPoints(point1,point2,worldSet);
     }
     @Override
     public void onGetNavigationText(int i, String s) {
