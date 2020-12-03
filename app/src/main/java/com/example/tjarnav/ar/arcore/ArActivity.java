@@ -71,6 +71,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private ModelRenderable leftRenderable;
     private ModelRenderable rightRenderable;
     private ModelRenderable straightRenderable;
+    private AnchorNode lineNode;
 
     boolean isHide = false;
     protected AMapNaviView mAMapNaviView;
@@ -301,7 +302,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         }
 
         mark.select();
-        mark.setWorldScale(new Vector3(0.5f, 0.5f, 0.5f));
+        mark.setWorldScale(new Vector3(0.2f, 0.2f, 0.2f));
         // 禁止缩放，没禁止缩放，设置的倍数会失效，自动加载默认的大小
         mark.getScaleController().setEnabled(false);
     }
@@ -412,19 +413,24 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         anchorNode.setWorldPosition(worldSet);
         anchorNode.setParent(arFragment.getArSceneView().getScene());
 //        TransformableNode lineNode=new TransformableNode(arFragment.getTransformationSystem());
-
+        lineNode=new AnchorNode();
+        lineNode.setParent(anchorNode);
         final Vector3 difference=Vector3.subtract(point1,point2);
         final Vector3 directionFromTopToBottom =difference.normalized();
         final Quaternion rotationFromAtoB=Quaternion.lookRotation(directionFromTopToBottom,Vector3.up());
         float len=difference.length();
+        System.out.println("lenth is ----"+len);
         MaterialFactory.makeOpaqueWithColor(this,new Color(android.graphics.Color.YELLOW))
                 .thenAccept(
                         material -> {
-                            ModelRenderable modelRenderable= ShapeFactory.makeCube(new Vector3(0.01f,0.001f,len),
+                            ModelRenderable modelRenderable= ShapeFactory.makeCube(new Vector3(0.1f,0.01f,len),
                                     Vector3.zero(),material);
-                            placeModel(anchorNode,modelRenderable);
+                            lineNode.setRenderable(modelRenderable);
+//                            placeModel(lineNode,modelRenderable);
                         }
                 );
+//        lineNode.setParent(anchorNode);
+        lineNode.setLocalPosition(point1);
     }
 
     private void placeModel(AnchorNode anchorNode,ModelRenderable modelRenderable){
@@ -495,13 +501,14 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
             dist[i]=(float) Math.abs(getDistance(cur, next[i]));
             System.out.println("distance " + i + " is now-----" + dist[i]);
         }
-        if(dist[0]<5 && dist[0]==getMin(dist)){
+        if(dist[0]<5f && dist[0]==getMin(dist)){
             pathPoints.remove(0);
             System.out.println("path points size:   "+pathPoints.size());
         }
-        Vector3 point1=new Vector3(0f,-5f,0f);
-        Vector3 point2=new Vector3(0f,-5f,-dist[1]);
-        Vector3 worldSet=new Vector3(0f,0f,0f);
+        System.out.println("1th dist:   "+-dist[1]);
+        Vector3 point1=new Vector3(0f,0f,0f);
+        Vector3 point2=new Vector3(0f,0f,-dist[1]);
+        Vector3 worldSet=new Vector3(0f,-2f,0f);
         lineBetweenPoints(point1,point2,worldSet);
     }
     @Override
@@ -636,8 +643,6 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                     }
 
                 }
-
-                Toast.makeText(this, "看log", Toast.LENGTH_SHORT).show();
                 for (int i = 0; i < steps.size() - 1; i++) {
                     //guide step相生相惜，指的是大导航段
                     AMapNaviRouteGuideGroup guide = guides.get(i);
