@@ -60,12 +60,15 @@ import com.google.ar.sceneform.ux.TransformableNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class ArActivity extends AppCompatActivity implements AMapNaviListener, AMapNaviViewListener {
 
     private static final String TAG = "ar test";
     private static final double MIN_OPENGL_VERSION = 3.0;
-    private static final int SHOW_OBJECT = 0x1101;
+    private static final int SHOW_WAY = 0x1101;
+    private Timer timer;
 
     private CleanArFragment arFragment;
     private Camera camera = null;
@@ -92,21 +95,15 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private List<AMapNaviRouteGuideGroup> guides;
     private List<NaviLatLng> pathPoints;
 
-//    private  final RotatingSettings rotatingSettings =new RotatingSettings();
-
-//    @SuppressLint("HandlerLeak")
-//    private Handler handler = new Handler() {
-//        @Override
-//        public void handleMessage(Message msg) {
-//            if (msg.what == SHOW_OBJECT) {
-////                 提供 3D 模型显示的位置（世界坐标系，相机面向的方向 2m 处）
-////                 World Arc Point
-////                Vector3 point = new Vector3(0, 0, -2);
-////                showObj(point);
-//            }
-//            super.handleMessage(msg);
-//        }
-//    };
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == SHOW_WAY) {
+                updatePath();
+            }
+            super.handleMessage(msg);
+        }
+    };
 
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -122,7 +119,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         setContentView(R.layout.activity_ar);
         arFragment = (CleanArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
         arFragment.getArSceneView().getPlaneRenderer().setEnabled(false);      //禁止 sceneform 框架的平面绘制
-
+        camera = arFragment.getArSceneView().getScene().getCamera();
         Intent intent = getIntent();
         mAMapNaviView = (AMapNaviView) findViewById(R.id.navi_view_2);
         mAMapNavi = AMapNavi.getInstance(getApplicationContext());
@@ -133,6 +130,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         mEndLatlng = new NaviLatLng(intent.getDoubleExtra("endLat", 0.0), intent.getDoubleExtra("endLon", 0.0));
 
         initModel();
+
     }
 
     @Override
@@ -165,7 +163,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         mAMapNavi.destroy();
     }
 
-    private void initModel(){
+    private void initModel() {
         //构造 3D 模型资源
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ModelRenderable.builder()
@@ -319,18 +317,29 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_LONG).show();
 //        Vector3 point = new Vector3(0, -2f, -4f);
 //        showObj(point, 9);
-//        float dist = 30f;
-//        float angle = 90f;
-        LatLng cur = new LatLng(31.274019166666665f, 121.50851555555556f);
-        LatLng next = new LatLng(31.274280548095703f,121.50889587402344f);
-        float dist = (float) Math.abs(getDistance(cur, next));
-        float angle = (float) getAngle(cur, next);
-        float radian= (float) Math.PI*angle/180;
-        System.out.println("dist: "+dist+" - angle: "+angle);
-        Vector3 point1 = new Vector3(0f, 0f, 0f);
-        System.out.println("v1::"+dist * (float) Math.cos(angle)+" v2::"+-dist * (float) Math.sin(angle));
-        Vector3 point2 = new Vector3(dist * (float) Math.cos(radian), 0f, -dist * (float) Math.sin(radian));
-        showPath(point1, point2,angle);
+        updatePath();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1 * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                timer = new Timer();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        // (1) 使用handler发送消息
+                        Message message = new Message();
+                        message.what = SHOW_WAY;
+                        handler.sendMessage(message);
+                    }
+                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
+            }
+        }) {
+        }.start();
+
     }
 
     public void hideNav(View view) {
@@ -384,7 +393,13 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         }
     }
 
-    private void showPath(Vector3 start, Vector3 end,float angle) {
+
+    /**
+     * @param start
+     * @param end
+     * @param angle
+     */
+    private void showPath(Vector3 start, Vector3 end, float angle) {
         Vector3 worldSet = new Vector3(0f, -2f, -2f);
         long duration = 3000L;
         AnchorNode anchorNode = new AnchorNode();
@@ -397,14 +412,22 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         TranslatingNode showNode = new TranslatingNode(start, end, duration);       // 测试旋转
         showNode.setParent(anchorNode);
         TransformableNode show = new TransformableNode(arFragment.getTransformationSystem());
-        show.setLocalRotation(Quaternion.axisAngle(new Vector3(0f, 1f, 0), angle));
         show.setParent(showNode);
         show.setRenderable(arrowRenderable);
-//        showNode.startAnimation();
-//        show.select();
-//        show.setWorldScale(new Vector3(0.1f, 0.1f, 0.1f));
-        // 禁止缩放，没禁止缩放，设置的倍数会失效，自动加载默认的大小
-//        show.getScaleController().setEnabled(false);
+        show.setLocalRotation(Quaternion.axisAngle(new Vector3(0f, 1f, 0), angle));
+    }
+
+    private void updatePath() {
+        LatLng cur = new LatLng(31.274019166666665f, 121.50851555555556f);
+        LatLng next = new LatLng(31.274280548095703f, 121.50889587402344f);
+        float dist = (float) Math.abs(getDistance(cur, next));
+        float angle = (float) getAngle(cur, next);
+        float radian = (float) Math.PI * angle / 180;
+        System.out.println("dist: " + dist + " - angle: " + angle);
+        Vector3 point1 = new Vector3(0f, 0f, 0f);
+        System.out.println("v1::" + dist * (float) Math.cos(angle) + " v2::" + -dist * (float) Math.sin(angle));
+        Vector3 point2 = new Vector3(dist * (float) Math.cos(radian), 0f, -dist * (float) Math.sin(radian));
+        showPath(point1, point2, angle);
     }
 
     /**
