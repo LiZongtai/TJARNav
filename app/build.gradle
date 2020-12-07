@@ -84,4 +84,8 @@ sceneform.asset('sampledata/models/straight.dae', // 'Source Asset Path' specifi
         'default',                            // 'Material Path' specified during import.
         'sampledata/models/straight.sfa',         // '.sfa Output Path' specified during import.
         'src/main/res/raw/straight')              // '.sfb Output Path' specified during import.
+sceneform.asset('sampledata/models/arrow.dae', // 'Source Asset Path' specified during import.
+        'default',                            // 'Material Path' specified during import.
+        'sampledata/models/arrow.sfa',         // '.sfa Output Path' specified during import.
+        'src/main/res/raw/arrow')              // '.sfb Output Path' specified during import.
 

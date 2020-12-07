@@ -45,7 +45,9 @@ import com.amap.api.navi.model.AimLessModeStat;
 import com.amap.api.navi.model.NaviInfo;
 import com.amap.api.navi.model.NaviLatLng;
 import com.example.tjarnav.R;
+import com.example.tjarnav.ar.arcore.animation.TranslatingNode;
 import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Camera;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
@@ -66,11 +68,13 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private static final int SHOW_OBJECT = 0x1101;
 
     private CleanArFragment arFragment;
+    private Camera camera = null;
     private AnchorNode tempNode;
     private ModelRenderable placeRenderable;
     private ModelRenderable leftRenderable;
     private ModelRenderable rightRenderable;
     private ModelRenderable straightRenderable;
+    private ModelRenderable arrowRenderable;
     private AnchorNode lineNode;
 
     boolean isHide = false;
@@ -90,19 +94,19 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
 //    private  final RotatingSettings rotatingSettings =new RotatingSettings();
 
-    @SuppressLint("HandlerLeak")
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.what == SHOW_OBJECT) {
-//                 提供 3D 模型显示的位置（世界坐标系，相机面向的方向 2m 处）
-//                 World Arc Point
-//                Vector3 point = new Vector3(0, 0, -2);
-//                showObj(point);
-            }
-            super.handleMessage(msg);
-        }
-    };
+//    @SuppressLint("HandlerLeak")
+//    private Handler handler = new Handler() {
+//        @Override
+//        public void handleMessage(Message msg) {
+//            if (msg.what == SHOW_OBJECT) {
+////                 提供 3D 模型显示的位置（世界坐标系，相机面向的方向 2m 处）
+////                 World Arc Point
+////                Vector3 point = new Vector3(0, 0, -2);
+////                showObj(point);
+//            }
+//            super.handleMessage(msg);
+//        }
+//    };
 
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -117,7 +121,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
         setContentView(R.layout.activity_ar);
         arFragment = (CleanArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
-        ArFragment arFragment;
+        arFragment.getArSceneView().getPlaneRenderer().setEnabled(false);      //禁止 sceneform 框架的平面绘制
 
         Intent intent = getIntent();
         mAMapNaviView = (AMapNaviView) findViewById(R.id.navi_view_2);
@@ -128,6 +132,40 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         mStartLatlng = new NaviLatLng(intent.getDoubleExtra("startLat", 0.0), intent.getDoubleExtra("startLon", 0.0));
         mEndLatlng = new NaviLatLng(intent.getDoubleExtra("endLat", 0.0), intent.getDoubleExtra("endLon", 0.0));
 
+        initModel();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        //设置模拟导航的行车速度
+        mAMapNavi.setEmulatorNaviSpeed(75);
+        sList.add(mStartLatlng);
+        eList.add(mEndLatlng);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mAMapNaviView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mAMapNaviView.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mAMapNaviView.onDestroy();
+        //since 1.6.0 不再在naviview destroy的时候自动执行AMapNavi.stopNavi();请自行执行
+        mAMapNavi.stopNavi();
+        mAMapNavi.destroy();
+    }
+
+    private void initModel(){
         //构造 3D 模型资源
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ModelRenderable.builder()
@@ -178,102 +216,21 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                                 toast.show();
                                 return null;
                             });
+            ModelRenderable.builder()
+                    .setSource(this, R.raw.arrow)
+                    .build()
+                    .thenAccept(renderable -> arrowRenderable = renderable)
+                    .exceptionally(
+                            throwable -> {
+                                Toast toast =
+                                        Toast.makeText(this, "Unable to load straight renderable", Toast.LENGTH_LONG);
+                                toast.setGravity(Gravity.CENTER, 0, 0);
+                                toast.show();
+                                return null;
+                            });
         }
-
-        // 线程通知延迟绘制
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1 * 1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                Message msg = handler.obtainMessage();
-                msg.what = SHOW_OBJECT;
-                handler.sendMessage(msg);
-            }
-        }) {
-        }.start();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        //设置模拟导航的行车速度
-        mAMapNavi.setEmulatorNaviSpeed(75);
-        sList.add(mStartLatlng);
-        eList.add(mEndLatlng);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mAMapNaviView.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mAMapNaviView.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mAMapNaviView.onDestroy();
-        //since 1.6.0 不再在naviview destroy的时候自动执行AMapNavi.stopNavi();请自行执行
-        mAMapNavi.stopNavi();
-        mAMapNavi.destroy();
-    }
-
-    //    private void showObj(Vector3 worldSet) {
-//        AnchorNode anchorNode = new AnchorNode();
-//        //设置锚点在世界坐标系的位置
-//        anchorNode.setWorldPosition(worldSet);
-//        anchorNode.setParent(arFragment.getArSceneView().getScene());
-//
-//        TransformableNode andy = new TransformableNode(arFragment.getTransformationSystem());
-//        andy.setParent(anchorNode);
-//        andy.setRenderable(andyRenderable);
-//
-//        andy.select();
-//        andy.setWorldScale(new Vector3(0.1f, 0.1f, 0.1f));
-//        // 禁止缩放，没禁止缩放，设置的倍数会失效，自动加载默认的大小
-//        andy.getScaleController().setEnabled(false);
-//
-//
-////        Node markAnimation=createAnimation();
-////        anchorNode.addChild(markAnimation);
-//    }
-//    private Node createAnimation(){
-//        Node base = new Node();
-//        base.setLocalPosition(new Vector3(0.0f, 0.0f, 0.0f));
-//        createMark("turnLeft",base,1f,50f,andyRenderable,0.3f,0.0f);
-//        return base;
-//    }
-//
-//
-//    private Node createMark(
-//            String name,
-//            Node parent,
-//            float fromParent,
-//            float degreesPerSecond,
-//            ModelRenderable modelRenderable,
-//            float markScale,
-//            float axisTilt){
-//        // Orbit is a rotating node with no renderable positioned at the sun.
-//        // The planet is positioned relative to the orbit so that it appears to rotate around the sun.
-//        // This is done instead of making the sun rotate so each planet can orbit at its own speed.
-//        RotatingNode orbit =new RotatingNode(rotatingSettings,true,false,0f);
-//        orbit.setDegreesPerSecond(degreesPerSecond);
-//        orbit.setParent(parent);
-//        Planet mark=new Planet(this,name,markScale,degreesPerSecond,axisTilt,modelRenderable, rotatingSettings);
-//        mark.setParent(orbit);
-//        mark.setLocalPosition((new Vector3(fromParent,0.0f,0.0f)));
-//
-//        return mark;
-//    }
     private void showObj(Vector3 worldSet, int type) {
         if (tempNode != null) {
             arFragment.getArSceneView().getScene().removeChild(tempNode);
@@ -360,8 +317,20 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
     public void goStraight(View view) {
         Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_LONG).show();
-        Vector3 point = new Vector3(0, -2f, -4f);
-        showObj(point, 9);
+//        Vector3 point = new Vector3(0, -2f, -4f);
+//        showObj(point, 9);
+//        float dist = 30f;
+//        float angle = 90f;
+        LatLng cur = new LatLng(31.274019166666665f, 121.50851555555556f);
+        LatLng next = new LatLng(31.274280548095703f,121.50889587402344f);
+        float dist = (float) Math.abs(getDistance(cur, next));
+        float angle = (float) getAngle(cur, next);
+        float radian= (float) Math.PI*angle/180;
+        System.out.println("dist: "+dist+" - angle: "+angle);
+        Vector3 point1 = new Vector3(0f, 0f, 0f);
+        System.out.println("v1::"+dist * (float) Math.cos(angle)+" v2::"+-dist * (float) Math.sin(angle));
+        Vector3 point2 = new Vector3(dist * (float) Math.cos(radian), 0f, -dist * (float) Math.sin(radian));
+        showPath(point1, point2,angle);
     }
 
     public void hideNav(View view) {
@@ -390,6 +359,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
         return d * 1000;
     }
+
     public static float getMin(float[] array) {
         float Max = array[0];
         for (int i = 1; i < array.length; i++) {
@@ -400,40 +370,79 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         return Max;
     }
 
+    public static double getAngle(LatLng start, LatLng end) {
+        double fLat = Math.PI * (start.latitude) / 180.0;
+        double fLng = Math.PI * (start.longitude) / 180.0;
+        double tLat = Math.PI * (end.latitude) / 180.0;
+        double tLng = Math.PI * (end.longitude) / 180.0;
+
+        double degree = (Math.atan2(Math.sin(tLng - fLng) * Math.cos(tLat), Math.cos(fLat) * Math.sin(tLat) - Math.sin(fLat) * Math.cos(tLat) * Math.cos(tLng - fLng))) * 180.0 / Math.PI;
+        if (degree >= 0) {
+            return degree;
+        } else {
+            return 360 + degree;
+        }
+    }
+
+    private void showPath(Vector3 start, Vector3 end,float angle) {
+        Vector3 worldSet = new Vector3(0f, -2f, -2f);
+        long duration = 3000L;
+        AnchorNode anchorNode = new AnchorNode();
+        //设置锚点在世界坐标系的位置
+        anchorNode.setWorldPosition(worldSet);
+        anchorNode.setParent(arFragment.getArSceneView().getScene());
+
+//        Vector3 start = new Vector3(0f, -2f, 0f);
+//        Vector3 end = new Vector3(-5f, 0f, -10f);
+        TranslatingNode showNode = new TranslatingNode(start, end, duration);       // 测试旋转
+        showNode.setParent(anchorNode);
+        TransformableNode show = new TransformableNode(arFragment.getTransformationSystem());
+        show.setLocalRotation(Quaternion.axisAngle(new Vector3(0f, 1f, 0), angle));
+        show.setParent(showNode);
+        show.setRenderable(arrowRenderable);
+//        showNode.startAnimation();
+//        show.select();
+//        show.setWorldScale(new Vector3(0.1f, 0.1f, 0.1f));
+        // 禁止缩放，没禁止缩放，设置的倍数会失效，自动加载默认的大小
+//        show.getScaleController().setEnabled(false);
+    }
+
     /**
      * 绘制路径线
+     *
      * @param point1
      * @param point2
      * @param worldSet
      */
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void lineBetweenPoints(Vector3 point1, Vector3 point2, Vector3 worldSet){
-        AnchorNode anchorNode=new AnchorNode();
+    public void lineBetweenPoints(Vector3 point1, Vector3 point2, Vector3 worldSet, float length) {
+        AnchorNode anchorNode = new AnchorNode();
         anchorNode.setWorldPosition(worldSet);
         anchorNode.setParent(arFragment.getArSceneView().getScene());
 //        TransformableNode lineNode=new TransformableNode(arFragment.getTransformationSystem());
-        lineNode=new AnchorNode();
+        lineNode = new AnchorNode();
         lineNode.setParent(anchorNode);
-        final Vector3 difference=Vector3.subtract(point1,point2);
-        final Vector3 directionFromTopToBottom =difference.normalized();
-        final Quaternion rotationFromAtoB=Quaternion.lookRotation(directionFromTopToBottom,Vector3.up());
-        float len=difference.length();
-        System.out.println("lenth is ----"+len);
-        MaterialFactory.makeOpaqueWithColor(this,new Color(android.graphics.Color.YELLOW))
+        final Vector3 difference = Vector3.subtract(point1, point2);
+        final Vector3 directionFromTopToBottom = difference.normalized();
+        final Quaternion rotationFromAtoB = Quaternion.lookRotation(directionFromTopToBottom, Vector3.up());
+        float len = difference.length();
+        System.out.println("lenth is ----" + length);
+        MaterialFactory.makeOpaqueWithColor(this, new Color(android.graphics.Color.YELLOW))
                 .thenAccept(
                         material -> {
-                            ModelRenderable modelRenderable= ShapeFactory.makeCube(new Vector3(0.1f,0.01f,len),
-                                    Vector3.zero(),material);
+                            ModelRenderable modelRenderable = ShapeFactory.makeCube(new Vector3(0.1f, 0.01f, length),
+                                    Vector3.zero(), material);
                             lineNode.setRenderable(modelRenderable);
 //                            placeModel(lineNode,modelRenderable);
                         }
                 );
 //        lineNode.setParent(anchorNode);
-        lineNode.setLocalPosition(point1);
+        lineNode.setLocalPosition(Vector3.add(point1, point2).scaled(0.5f));
+        lineNode.setWorldRotation(rotationFromAtoB);
     }
 
-    private void placeModel(AnchorNode anchorNode,ModelRenderable modelRenderable){
+    private void placeModel(AnchorNode anchorNode, ModelRenderable modelRenderable) {
         anchorNode.setRenderable(modelRenderable);
         arFragment.getArSceneView().getScene().addChild(anchorNode);
     }
@@ -491,26 +500,32 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     public void onLocationChange(AMapNaviLocation aMapNaviLocation) {
         // 当前位置回调
         int len = 5;
-        System.out.println("path points size:   "+pathPoints.size());
+        System.out.println("path points size:   " + pathPoints.size());
         LatLng cur = new LatLng(aMapNaviLocation.getCoord().getLatitude(), aMapNaviLocation.getCoord().getLongitude());
         LatLng[] next = new LatLng[len];
         float[] dist = new float[len];
+        double[] angle = new double[len];
         for (int i = 0; i < len; i++) {
-            NaviLatLng point=pathPoints.get(i);
-            next[i]=new LatLng(point.getLatitude(), point.getLongitude());
-            dist[i]=(float) Math.abs(getDistance(cur, next[i]));
-            System.out.println("distance " + i + " is now-----" + dist[i]);
+            NaviLatLng point = pathPoints.get(i);
+            next[i] = new LatLng(point.getLatitude(), point.getLongitude());
+            dist[i] = (float) Math.abs(getDistance(cur, next[i]));
+            angle[i] = getAngle(cur, next[i]);
+            System.out.println("distance " + i + " is -----" + dist[i]);
+            System.out.println("angle degree " + i + " is -----" + angle[i]);
         }
-        if(dist[0]<5f && dist[0]==getMin(dist)){
+        if (dist[0] < 5f && dist[0] == getMin(dist)) {
             pathPoints.remove(0);
-            System.out.println("path points size:   "+pathPoints.size());
+            System.out.println("path points size: " + pathPoints.size());
         }
-        System.out.println("1th dist:   "+-dist[1]);
-        Vector3 point1=new Vector3(0f,0f,0f);
-        Vector3 point2=new Vector3(0f,0f,-dist[1]);
-        Vector3 worldSet=new Vector3(0f,-2f,0f);
-        lineBetweenPoints(point1,point2,worldSet);
+        System.out.println("1th dist:   " + -dist[1]);
+        System.out.println("1th angle:   " + angle[1]);
+        Vector3 point1 = new Vector3(0f, 0f, 0f);
+        Vector3 point2 = new Vector3(dist[1] * (float) Math.cos(angle[1]), 0f, -dist[1] * (float) Math.sin(angle[1]));
+        Vector3 worldSet = new Vector3(0f, -2f, 0f);
+//        showPath(point1, point2);
+//        lineBetweenPoints(point1,point2,worldSet,dist[1]);
     }
+
     @Override
     public void onGetNavigationText(int i, String s) {
         // 播报类型和播报文字回调
