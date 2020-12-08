@@ -17,25 +17,25 @@
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:text="hide Nav"
-            android:onClick="hideNav"/>
-        <Button
-            android:layout_width="120dp"
-            android:layout_height="wrap_content"
-            android:id="@+id/leftBtn"
-            android:text="turn Left"
-            android:onClick="turnLeft"/>
-        <Button
-            android:layout_width="120dp"
-            android:layout_height="wrap_content"
-            android:id="@+id/rightBtn"
-            android:text="turn Right"
-            android:onClick="turnRight"/>
+            android:onClick="showNav"/>
+<!--        <Button-->
+<!--            android:layout_width="120dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:id="@+id/leftBtn"-->
+<!--            android:text="turn Left"-->
+<!--            android:onClick="turnLeft"/>-->
+<!--        <Button-->
+<!--            android:layout_width="120dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:id="@+id/rightBtn"-->
+<!--            android:text="turn Right"-->
+<!--            android:onClick="turnRight"/>-->
         <Button
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:id="@+id/straightBtn"
-            android:text="go straight"
-            android:onClick="goStraight"/>
+            android:text="show path"
+            android:onClick="showPath"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"

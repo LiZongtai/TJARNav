@@ -16,6 +16,7 @@ import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMapUtils;
@@ -69,6 +70,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private static final double MIN_OPENGL_VERSION = 3.0;
     private static final int SHOW_WAY = 0x1101;
     private Timer timer;
+    private boolean isShowPath = false;
 
     private CleanArFragment arFragment;
     private Camera camera = null;
@@ -94,6 +96,19 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private List<AMapNaviLink> links;
     private List<AMapNaviRouteGuideGroup> guides;
     private List<NaviLatLng> pathPoints;
+
+    private LatLng curLatLng;
+    private LatLng nextLatLng;
+
+    class CurrentPath {
+        LatLng start;
+        LatLng end;
+
+        public CurrentPath(LatLng start, LatLng end) {
+            this.start = start;
+            this.end = end;
+        }
+    }
 
     private Handler handler = new Handler() {
         @Override
@@ -130,7 +145,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         mEndLatlng = new NaviLatLng(intent.getDoubleExtra("endLat", 0.0), intent.getDoubleExtra("endLon", 0.0));
 
         initModel();
-
+        initTimer();
     }
 
     @Override
@@ -229,6 +244,32 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         }
     }
 
+    private void initTimer() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1 * 200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                timer = new Timer();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        // (1) 使用handler发送消息
+                        Message message = new Message();
+                        if (isShowPath){
+                            message.what = SHOW_WAY;
+                            handler.sendMessage(message);
+                        }
+                    }
+                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
+            }
+        }) {
+        }.start();
+    }
+
     private void showObj(Vector3 worldSet, int type) {
         if (tempNode != null) {
             arFragment.getArSceneView().getScene().removeChild(tempNode);
@@ -284,71 +325,65 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     }
 
     public void turnLeft() {
-        Toast.makeText(ArActivity.this, "左转", Toast.LENGTH_LONG).show();
+        Toast.makeText(ArActivity.this, "左转", Toast.LENGTH_SHORT).show();
         Vector3 point = new Vector3(-1f, -2f, -4f);
         showObj(point, 2);
     }
 
     public void turnLeft(View view) {
-        Toast.makeText(ArActivity.this, "左转", Toast.LENGTH_LONG).show();
+        Toast.makeText(ArActivity.this, "左转", Toast.LENGTH_SHORT).show();
         Vector3 point = new Vector3(-1f, -2f, -4f);
         showObj(point, 2);
     }
 
     public void turnRight() {
-        Toast.makeText(ArActivity.this, "右转", Toast.LENGTH_LONG).show();
+        Toast.makeText(ArActivity.this, "右转", Toast.LENGTH_SHORT).show();
         Vector3 point = new Vector3(1f, -2f, -4f);
         showObj(point, 3);
     }
 
     public void turnRight(View view) {
-        Toast.makeText(ArActivity.this, "右转", Toast.LENGTH_LONG).show();
+        Toast.makeText(ArActivity.this, "右转", Toast.LENGTH_SHORT).show();
         Vector3 point = new Vector3(1f, -2f, -4f);
         showObj(point, 3);
     }
 
     public void goStraight() {
-        Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_LONG).show();
+        Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_SHORT).show();
         Vector3 point = new Vector3(0, -2f, -4f);
         showObj(point, 9);
     }
 
-    public void goStraight(View view) {
-        Toast.makeText(ArActivity.this, "直行", Toast.LENGTH_LONG).show();
+    public void showPath(View view) {
+        Button button=(Button)view;
+//        button.setText("hide Path");
 //        Vector3 point = new Vector3(0, -2f, -4f);
 //        showObj(point, 9);
-        updatePath();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1 * 1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                timer = new Timer();
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        // (1) 使用handler发送消息
-                        Message message = new Message();
-                        message.what = SHOW_WAY;
-                        handler.sendMessage(message);
-                    }
-                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
-            }
-        }) {
-        }.start();
+        if(isShowPath==false){
+            updatePath();
+            isShowPath=true;
+            Toast.makeText(ArActivity.this, "显示路径", Toast.LENGTH_SHORT).show();
+            button.setText("hide path");
+        }else{
+            isShowPath=false;
+            Toast.makeText(ArActivity.this, "关闭显示路径", Toast.LENGTH_SHORT).show();
+            button.setText("show path");
+        }
+
+
 
     }
 
-    public void hideNav(View view) {
+    public void showNav(View view) {
+        Button button=(Button)view;
         if (isHide) {
             mAMapNaviView.setVisibility(View.VISIBLE);
             isHide = false;
+            button.setText("show Nav");
         } else {
             mAMapNaviView.setVisibility(View.INVISIBLE);
             isHide = true;
+            button.setText("hide Nav");
         }
     }
 
@@ -399,7 +434,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
      * @param end
      * @param angle
      */
-    private void showPath(Vector3 start, Vector3 end, float angle) {
+    private void startShowPath(Vector3 start, Vector3 end, float angle) {
         Vector3 worldSet = new Vector3(0f, -2f, -2f);
         long duration = 3000L;
         AnchorNode anchorNode = new AnchorNode();
@@ -418,8 +453,8 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     }
 
     private void updatePath() {
-        LatLng cur = new LatLng(31.274019166666665f, 121.50851555555556f);
-        LatLng next = new LatLng(31.274280548095703f, 121.50889587402344f);
+        LatLng cur = curLatLng;
+        LatLng next = nextLatLng;
         float dist = (float) Math.abs(getDistance(cur, next));
         float angle = (float) getAngle(cur, next);
         float radian = (float) Math.PI * angle / 180;
@@ -427,7 +462,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         Vector3 point1 = new Vector3(0f, 0f, 0f);
         System.out.println("v1::" + dist * (float) Math.cos(angle) + " v2::" + -dist * (float) Math.sin(angle));
         Vector3 point2 = new Vector3(dist * (float) Math.cos(radian), 0f, -dist * (float) Math.sin(radian));
-        showPath(point1, point2, angle);
+        startShowPath(point1, point2, angle);
     }
 
     /**
@@ -533,18 +568,15 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
             next[i] = new LatLng(point.getLatitude(), point.getLongitude());
             dist[i] = (float) Math.abs(getDistance(cur, next[i]));
             angle[i] = getAngle(cur, next[i]);
-            System.out.println("distance " + i + " is -----" + dist[i]);
-            System.out.println("angle degree " + i + " is -----" + angle[i]);
+            System.out.println("path list distance " + i + " is -----" + dist[i]);
+            System.out.println("path list angle degree " + i + " is -----" + angle[i]);
         }
         if (dist[0] < 5f && dist[0] == getMin(dist)) {
             pathPoints.remove(0);
             System.out.println("path points size: " + pathPoints.size());
         }
-        System.out.println("1th dist:   " + -dist[1]);
-        System.out.println("1th angle:   " + angle[1]);
-        Vector3 point1 = new Vector3(0f, 0f, 0f);
-        Vector3 point2 = new Vector3(dist[1] * (float) Math.cos(angle[1]), 0f, -dist[1] * (float) Math.sin(angle[1]));
-        Vector3 worldSet = new Vector3(0f, -2f, 0f);
+        curLatLng = cur;
+        nextLatLng = next[1];
 //        showPath(point1, point2);
 //        lineBetweenPoints(point1,point2,worldSet,dist[1]);
     }
@@ -684,23 +716,23 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                 for (int i = 0; i < steps.size() - 1; i++) {
                     //guide step相生相惜，指的是大导航段
                     AMapNaviRouteGuideGroup guide = guides.get(i);
-                    System.out.println("AMapNaviGuide 路线起点经纬度:" + guide.getGroupEnterCoord() + "");
-                    System.out.println("AMapNaviGuide 路线名:" + guide.getGroupName() + "");
-                    System.out.println("AMapNaviGuide 路线长:" + guide.getGroupLen() + "m");
-                    System.out.println("AMapNaviGuide 路线耗时:" + guide.getGroupTime() + "s");
-                    System.out.println("AMapNaviGuide 路线IconType" + guide.getGroupIconType() + "");
+//                    System.out.println("AMapNaviGuide 路线起点经纬度:" + guide.getGroupEnterCoord() + "");
+//                    System.out.println("AMapNaviGuide 路线名:" + guide.getGroupName() + "");
+//                    System.out.println("AMapNaviGuide 路线长:" + guide.getGroupLen() + "m");
+//                    System.out.println("AMapNaviGuide 路线耗时:" + guide.getGroupTime() + "s");
+//                    System.out.println("AMapNaviGuide 路线IconType" + guide.getGroupIconType() + "");
                     AMapNaviStep step = steps.get(i);
-                    System.out.println("AMapNaviStep 距离:" + step.getLength() + "m" + " " + "耗时:" + step.getTime() + "s");
-                    System.out.println("AMapNaviStep 红绿灯个数:" + step.getTrafficLightNumber());
+//                    System.out.println("AMapNaviStep 距离:" + step.getLength() + "m" + " " + "耗时:" + step.getTime() + "s");
+//                    System.out.println("AMapNaviStep 红绿灯个数:" + step.getTrafficLightNumber());
 
 
                     //link指的是大导航段中的小导航段
                     links = step.getLinks();
                     for (AMapNaviLink link : links) {
                         // 请看com.amap.api.navi.enums.RoadClass，以及帮助文档
-                        System.out.println("AMapNaviLink 道路名:" + link.getRoadName() + " " + "道路等级: " + link.getRoadClass());
+//                        System.out.println("AMapNaviLink 道路名:" + link.getRoadName() + " " + "道路等级: " + link.getRoadClass());
                         // 请看com.amap.api.navi.enums.RoadType，以及帮助文档
-                        System.out.println("AMapNaviLink 道路类型:" + link.getRoadType());
+//                        System.out.println("AMapNaviLink 道路类型:" + link.getRoadType());
                     }
                 }
 
