@@ -9,14 +9,18 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Point;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.util.StateSet;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMapUtils;
@@ -47,9 +51,14 @@ import com.amap.api.navi.model.NaviInfo;
 import com.amap.api.navi.model.NaviLatLng;
 import com.example.tjarnav.R;
 import com.example.tjarnav.ar.arcore.animation.TranslatingNode;
+import com.google.ar.core.Frame;
+import com.google.ar.core.Pose;
+import com.google.ar.core.TrackingState;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.Camera;
 import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.collision.Ray;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
@@ -100,6 +109,10 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private LatLng curLatLng;
     private LatLng nextLatLng;
 
+    private TextView testText;
+    private Point size=new Point();
+    private TranslatingNode showNode;
+
     class CurrentPath {
         LatLng start;
         LatLng end;
@@ -134,7 +147,6 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         setContentView(R.layout.activity_ar);
         arFragment = (CleanArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
         arFragment.getArSceneView().getPlaneRenderer().setEnabled(false);      //禁止 sceneform 框架的平面绘制
-        camera = arFragment.getArSceneView().getScene().getCamera();
         Intent intent = getIntent();
         mAMapNaviView = (AMapNaviView) findViewById(R.id.navi_view_2);
         mAMapNavi = AMapNavi.getInstance(getApplicationContext());
@@ -146,6 +158,9 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
         initModel();
         initTimer();
+        initDisplay();
+
+        testText=(TextView)findViewById(R.id.testText);
     }
 
     @Override
@@ -176,6 +191,31 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         //since 1.6.0 不再在naviview destroy的时候自动执行AMapNavi.stopNavi();请自行执行
         mAMapNavi.stopNavi();
         mAMapNavi.destroy();
+    }
+
+    private void onUpdate(){
+        Frame frame = arFragment.getArSceneView().getArFrame();
+        Vector3 cameraPos= camera.getWorldPosition();
+
+        if(showNode!=null){
+            Vector3 nodeWorld=showNode.getWorldPosition();
+            Vector3 nodeOnScreen = arFragment.getArSceneView().getScene().getCamera().worldToScreenPoint(nodeWorld);
+            System.out.println("node On World: "+nodeWorld);
+            System.out.println("node On Screen: "+nodeOnScreen);
+            testText.setText(""+nodeOnScreen);
+        }
+
+    }
+
+    private void initDisplay(){
+        Display display=getWindowManager().getDefaultDisplay();
+        display.getRealSize(size);
+        camera = arFragment.getArSceneView().getScene().getCamera();
+//        Scene.OnUpdateListener
+        arFragment.getArSceneView().getScene().addOnUpdateListener(frameTime -> {
+            arFragment.onUpdate(frameTime);
+            onUpdate();
+        });
     }
 
     private void initModel() {
@@ -264,7 +304,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                             handler.sendMessage(message);
                         }
                     }
-                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
+                }, 0, 20000);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
             }
         }) {
         }.start();
@@ -439,12 +479,20 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         long duration = 3000L;
         AnchorNode anchorNode = new AnchorNode();
         //设置锚点在世界坐标系的位置
-        anchorNode.setWorldPosition(worldSet);
+        anchorNode.setLocalPosition(worldSet);
         anchorNode.setParent(arFragment.getArSceneView().getScene());
 
 //        Vector3 start = new Vector3(0f, -2f, 0f);
 //        Vector3 end = new Vector3(-5f, 0f, -10f);
-        TranslatingNode showNode = new TranslatingNode(start, end, duration);       // 测试旋转
+//        Node testNode=new Node();
+//        testNode.setParent(anchorNode);
+//        testNode.setLocalPosition(new Vector3(0f,0f,0f));
+//        testNode.setRenderable(placeRenderable);
+//        Ray ray=camera.screenPointToRay(size.x/2f,size.y/2f);
+//        Vector3 curPoint=ray.getPoint(0.1f);
+//        System.out.println("ray current point -- "+curPoint);
+
+        showNode = new TranslatingNode(start, end, duration);       // 测试旋转
         showNode.setParent(anchorNode);
         TransformableNode show = new TransformableNode(arFragment.getTransformationSystem());
         show.setParent(showNode);

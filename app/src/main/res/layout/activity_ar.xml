@@ -35,7 +35,12 @@
             android:layout_height="wrap_content"
             android:id="@+id/straightBtn"
             android:text="show path"
-            android:onClick="showPath"/>
+            android:onClick="showPath"/>]
+        <TextView
+            android:layout_width="400dp"
+            android:layout_height="40dp"
+            android:id="@+id/testText"
+            android:text="test"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
