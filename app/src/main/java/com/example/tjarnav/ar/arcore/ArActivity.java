@@ -59,6 +59,7 @@ import com.google.ar.sceneform.Camera;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.Scene;
 import com.google.ar.sceneform.collision.Ray;
+import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
@@ -108,6 +109,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 
     private LatLng curLatLng;
     private LatLng nextLatLng;
+    private Vector3 worldPos=new Vector3(0f,-2f,-2f);
 
     private TextView testText;
     private Point size=new Point();
@@ -196,14 +198,22 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private void onUpdate(){
         Frame frame = arFragment.getArSceneView().getArFrame();
         Vector3 cameraPos= camera.getWorldPosition();
-
-        if(showNode!=null){
-            Vector3 nodeWorld=showNode.getWorldPosition();
-            Vector3 nodeOnScreen = arFragment.getArSceneView().getScene().getCamera().worldToScreenPoint(nodeWorld);
-            System.out.println("node On World: "+nodeWorld);
-            System.out.println("node On Screen: "+nodeOnScreen);
-            testText.setText(""+nodeOnScreen);
+        if(camera!=null){
+            worldPos=new Vector3(cameraPos.x,cameraPos.y-2f, cameraPos.z-2f);
+            System.out.println("ar world origin pos: "+worldPos);
+            testText.setText(""+worldPos);
+            if(tempNode!=null){
+                tempNode.setWorldPosition(worldPos);
+            }
         }
+
+//        if(showNode!=null){
+//            Vector3 nodeWorld=showNode.getWorldPosition();
+//            Vector3 nodeOnScreen = arFragment.getArSceneView().getScene().getCamera().worldToScreenPoint(nodeWorld);
+//            System.out.println("node On World: "+nodeWorld);
+//            System.out.println("node On Screen: "+nodeOnScreen);
+//            testText.setText(""+nodeOnScreen);
+//        }
 
     }
 
@@ -304,7 +314,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                             handler.sendMessage(message);
                         }
                     }
-                }, 0, 20000);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
+                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
             }
         }) {
         }.start();
@@ -475,7 +485,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
      * @param angle
      */
     private void startShowPath(Vector3 start, Vector3 end, float angle) {
-        Vector3 worldSet = new Vector3(0f, -2f, -2f);
+        Vector3 worldSet = worldPos;
         long duration = 3000L;
         AnchorNode anchorNode = new AnchorNode();
         //设置锚点在世界坐标系的位置
