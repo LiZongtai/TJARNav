@@ -10,6 +10,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Point;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -74,7 +78,9 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ArActivity extends AppCompatActivity implements AMapNaviListener, AMapNaviViewListener {
+import static java.lang.Math.round;
+
+public class ArActivity extends AppCompatActivity implements AMapNaviListener, AMapNaviViewListener, SensorEventListener {
 
     private static final String TAG = "ar test";
     private static final double MIN_OPENGL_VERSION = 3.0;
@@ -114,6 +120,21 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     private TextView testText;
     private Point size=new Point();
     private TranslatingNode showNode;
+
+    //sensor object
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private Sensor mMagneticField;
+    //sensor data
+    private float[] r = new float[9];   //rotation matrix
+    private float[] values = new float[3];   //orientation values
+    private float[] accelerometerValues = new float[3]; //data of acclerometer sensor
+    private float[] magneticFieldValues = new float[3];  //data of magnetic field sensor
+
+    // showAngle - pathAngle = turnAngle
+    private float pathAngle;
+    private float showAngle;
+    private int turnAngle=361;
 
     class CurrentPath {
         LatLng start;
@@ -161,8 +182,35 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         initModel();
         initTimer();
         initDisplay();
+        initSensor();
 
         testText=(TextView)findViewById(R.id.testText);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            accelerometerValues = event.values;
+        }
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            magneticFieldValues = event.values;
+        }
+        SensorManager.getRotationMatrix(r, null, accelerometerValues, magneticFieldValues);
+        SensorManager.getOrientation(r, values);
+        values[0] = (float) Math.toDegrees(values[0]);
+
+        if(curLatLng!=null && nextLatLng!=null && values!=null){
+            System.out.println("currentLatLng--"+curLatLng+", nextLatLng--"+nextLatLng);
+            pathAngle=(float)getAngle(curLatLng,nextLatLng);
+            showAngle=values[0]+90;
+            turnAngle=round(showAngle)-round(pathAngle);
+            testText.setText(""+turnAngle);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
     }
 
     @Override
@@ -178,12 +226,17 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
     protected void onResume() {
         super.onResume();
         mAMapNaviView.onResume();
+        //regist listener
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mMagneticField, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         mAMapNaviView.onPause();
+        //unregist listener
+        mSensorManager.unregisterListener(this);
     }
 
     @Override
@@ -200,8 +253,8 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
         Vector3 cameraPos= camera.getWorldPosition();
         if(camera!=null){
             worldPos=new Vector3(cameraPos.x,cameraPos.y-2f, cameraPos.z-2f);
-            System.out.println("ar world origin pos: "+worldPos);
-            testText.setText(""+worldPos);
+//            System.out.println("ar world origin pos: "+worldPos);
+//            testText.setText(""+worldPos);
             if(tempNode!=null){
                 tempNode.setWorldPosition(worldPos);
             }
@@ -215,6 +268,16 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 //            testText.setText(""+nodeOnScreen);
 //        }
 
+    }
+
+    /**
+     *
+     */
+    private void initSensor(){
+        //init sensor
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mMagneticField = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
     }
 
     private void initDisplay(){
@@ -299,7 +362,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
             @Override
             public void run() {
                 try {
-                    Thread.sleep(1 * 200);
+                    Thread.sleep(1 * 100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -314,7 +377,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
                             handler.sendMessage(message);
                         }
                     }
-                }, 0, 200);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
+                }, 0, 100);//每隔一秒使用handler发送一下消息,也就是每隔一秒执行一次,一直重复执行
             }
         }) {
         }.start();
@@ -486,7 +549,7 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
      */
     private void startShowPath(Vector3 start, Vector3 end, float angle) {
         Vector3 worldSet = worldPos;
-        long duration = 3000L;
+        long duration = 500L;
         AnchorNode anchorNode = new AnchorNode();
         //设置锚点在世界坐标系的位置
         anchorNode.setLocalPosition(worldSet);
@@ -502,25 +565,27 @@ public class ArActivity extends AppCompatActivity implements AMapNaviListener, A
 //        Vector3 curPoint=ray.getPoint(0.1f);
 //        System.out.println("ray current point -- "+curPoint);
 
-        showNode = new TranslatingNode(start, end, duration);       // 测试旋转
+        showNode = new TranslatingNode(start, end, duration);
         showNode.setParent(anchorNode);
         TransformableNode show = new TransformableNode(arFragment.getTransformationSystem());
         show.setParent(showNode);
         show.setRenderable(arrowRenderable);
+        show.setWorldScale(new Vector3(0.2f,0.2f,0.2f));
         show.setLocalRotation(Quaternion.axisAngle(new Vector3(0f, 1f, 0), angle));
     }
 
     private void updatePath() {
         LatLng cur = curLatLng;
         LatLng next = nextLatLng;
+        int angle = turnAngle;
         float dist = (float) Math.abs(getDistance(cur, next));
-        float angle = (float) getAngle(cur, next);
         float radian = (float) Math.PI * angle / 180;
-        System.out.println("dist: " + dist + " - angle: " + angle);
         Vector3 point1 = new Vector3(0f, 0f, 0f);
-        System.out.println("v1::" + dist * (float) Math.cos(angle) + " v2::" + -dist * (float) Math.sin(angle));
+//        System.out.println("v1::" + dist * (float) Math.cos(angle) + " v2::" + -dist * (float) Math.sin(angle));
         Vector3 point2 = new Vector3(dist * (float) Math.cos(radian), 0f, -dist * (float) Math.sin(radian));
-        startShowPath(point1, point2, angle);
+        if(dist>5f){
+            startShowPath(point1, point2, angle);
+        }
     }
 
     /**
